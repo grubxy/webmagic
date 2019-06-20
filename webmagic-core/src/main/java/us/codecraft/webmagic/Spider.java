@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import us.codecraft.webmagic.downloader.Downloader;
 import us.codecraft.webmagic.downloader.HttpClientDownloader;
+import us.codecraft.webmagic.downloader.OkHttpDownloader;
 import us.codecraft.webmagic.pipeline.CollectorPipeline;
 import us.codecraft.webmagic.pipeline.ConsolePipeline;
 import us.codecraft.webmagic.pipeline.Pipeline;
@@ -277,7 +278,8 @@ public class Spider implements Runnable, Task {
 
     protected void initComponent() {
         if (downloader == null) {
-            this.downloader = new HttpClientDownloader();
+//            this.downloader = new HttpClientDownloader();
+            this.downloader = new OkHttpDownloader();
         }
         if (pipelines.isEmpty()) {
             pipelines.add(new ConsolePipeline());

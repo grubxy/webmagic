@@ -1,9 +1,6 @@
 package us.codecraft.webmagic.downloader;
 
-import okhttp3.ConnectionPool;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.RequestBody;
+import okhttp3.*;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.utils.HttpConstant;
 
@@ -13,6 +10,7 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class OkHttpGenerator {
@@ -50,7 +48,6 @@ public class OkHttpGenerator {
     }
 
     public OkHttpClient getClient(Site site) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
-
         return new OkHttpClient.Builder()
                 .sslSocketFactory(getSSLSocketFactory(), getX509TrustManage())
                 .followRedirects(false) // 禁用重定向
@@ -59,17 +56,38 @@ public class OkHttpGenerator {
                 .build();
     }
 
-    public Request.Builder selectRequestMethod(us.codecraft.webmagic.Request request) {
+    public Request.Builder getRequest(Request.Builder builder,us.codecraft.webmagic.Request request) {
         String method = request.getMethod();
         if (method == null || method.equalsIgnoreCase(HttpConstant.Method.GET)) {
             // default get
-            return new Request.Builder().get();
+            return builder.get();
         } else if (method.equalsIgnoreCase(HttpConstant.Method.POST)) {
-            return addFormParams(new Request.Builder().post(addFormParams(request)));
+            return builder.post(
+                    RequestBody.create(MediaType.get(request.getRequestBody().getContentType()),
+                            request.getRequestBody().getBody())
+            );
+        } else if (method.equalsIgnoreCase(HttpConstant.Method.HEAD)) {
+            return builder.head();
+        }else if (method.equalsIgnoreCase(HttpConstant.Method.PUT)) {
+//            return new Request.Builder().put();
+        }else if (method.equalsIgnoreCase(HttpConstant.Method.DELETE)) {
+            return builder.delete();
         }
+        throw new IllegalArgumentException("Illegal HTTP Method " + method);
     }
 
-    private RequestBody addFormParams(us.codecraft.webmagic.Request request) {
-
+    public Request.Builder setRequestHeaders(Request.Builder builder, us.codecraft.webmagic.Request request) {
+        Headers.Builder headBuilder = new Headers.Builder();
+        return builder.headers(getHeader(headBuilder, request).build());
     }
+
+    private Headers.Builder getHeader(Headers.Builder builder, us.codecraft.webmagic.Request request) {
+        if (request.getHeaders() != null && !request.getHeaders().isEmpty()) {
+            for (Map.Entry<String, String> header:request.getHeaders().entrySet()) {
+                builder.add(header.getKey(), header.getValue());
+            }
+        }
+        return builder;
+    }
+
 }
