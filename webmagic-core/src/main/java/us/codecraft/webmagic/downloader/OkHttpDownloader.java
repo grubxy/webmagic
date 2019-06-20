@@ -10,7 +10,11 @@ import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Task;
 import us.codecraft.webmagic.proxy.Proxy;
 import us.codecraft.webmagic.proxy.ProxyProvider;
+import us.codecraft.webmagic.selector.PlainText;
+import us.codecraft.webmagic.utils.CharsetUtils;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -26,6 +30,8 @@ public class OkHttpDownloader extends AbstractDownloader {
     private OkHttpGenerator okHttpGenerator = new OkHttpGenerator();
 
     public ProxyProvider proxyProvider;
+
+    private boolean responseHeader = true;
 
     private OkHttpClient getOkHttpClient(Site site) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         if (site == null) {
@@ -50,7 +56,7 @@ public class OkHttpDownloader extends AbstractDownloader {
         if (task == null || task.getSite() == null) {
             throw new NullPointerException("task or site can not be null");
         }
-
+        long start = System.currentTimeMillis();
         Proxy proxy = proxyProvider != null ? proxyProvider.getProxy(task):null;
 
         Page page = Page.fail();
@@ -62,15 +68,50 @@ public class OkHttpDownloader extends AbstractDownloader {
             Response response = client.newCall(okRequest).execute();
             logger.info(response.toString());
 
-
+            page = handleResponse(request, request.getCharset() != null ?request.getCharset():task.getSite().getCharset(), response);
+            return page;
         }  catch (Exception e) {
-            logger.info("Exception..."+e.getMessage());
+            logger.warn("download page {} error", request.getUrl(), e);
+            return page;
+        } finally {
+            long end = System.currentTimeMillis();
+            logger.info("cust time:"+ String.valueOf(end-start) +"url"+request.getUrl());
         }
-        return null;
     }
 
     @Override
     public void setThread(int thread) {
 
+    }
+
+    protected Page handleResponse(Request request, String charset, Response response) throws IOException {
+        byte[] bytes = response.body().bytes();
+        String contentType = response.body().contentType() == null?"":response.body().contentType().type();
+        Page page = new Page();
+        page.setBytes(bytes);
+        if (!request.isBinaryContent()) {
+            if (charset == null) {
+                charset = getHtmlCharset(contentType, bytes);
+            }
+            page.setCharset(charset);
+            page.setRawText(new String(bytes, charset));
+         }
+        page.setUrl(new PlainText(request.getUrl()));
+        page.setRequest(request);
+        page.setStatusCode(response.code());
+        page.setDownloadSuccess(true);
+        if (responseHeader) {
+            page.setHeaders(response.headers().toMultimap());
+        }
+        return page;
+    }
+
+    private String getHtmlCharset(String contentType, byte[] contentBytes) throws IOException {
+        String charset = CharsetUtils.detectCharset(contentType, contentBytes);
+        if (charset == null) {
+            charset = Charset.defaultCharset().name();
+            logger.warn("Charset autodetect failed, use {} as charset. Please specify charset in Site.setCharset()", Charset.defaultCharset());
+        }
+        return charset;
     }
 }
