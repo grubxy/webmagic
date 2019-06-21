@@ -14,6 +14,7 @@ import us.codecraft.webmagic.selector.PlainText;
 import us.codecraft.webmagic.utils.CharsetUtils;
 
 import java.io.IOException;
+import java.net.ProxySelector;
 import java.nio.charset.Charset;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -31,7 +32,17 @@ public class OkHttpDownloader extends AbstractDownloader {
 
     public ProxyProvider proxyProvider;
 
+    public ProxySelector proxySelector;
+
     private boolean responseHeader = true;
+
+    public void setProxyProvider(ProxyProvider proxyProvider) {
+        this.proxyProvider = proxyProvider;
+    }
+
+    public void setProxySelector(ProxySelector proxySelector) {
+        this.proxySelector = proxySelector;
+    }
 
     private OkHttpClient getOkHttpClient(Site site) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         if (site == null) {
@@ -66,7 +77,6 @@ public class OkHttpDownloader extends AbstractDownloader {
             okhttp3.Request okRequest = okHttpGenerator.getRequest(requestBuilder.url(request.getUrl()), request).build();
 
             Response response = client.newCall(okRequest).execute();
-            logger.info(response.toString());
 
             page = handleResponse(request, request.getCharset() != null ?request.getCharset():task.getSite().getCharset(), response);
             return page;
@@ -75,7 +85,7 @@ public class OkHttpDownloader extends AbstractDownloader {
             return page;
         } finally {
             long end = System.currentTimeMillis();
-            logger.info("cust time:"+ String.valueOf(end-start) +"url"+request.getUrl());
+            logger.info("cost time:"+ String.valueOf(end-start) +"url"+request.getUrl());
         }
     }
 
