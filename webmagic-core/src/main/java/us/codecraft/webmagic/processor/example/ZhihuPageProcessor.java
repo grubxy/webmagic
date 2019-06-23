@@ -9,9 +9,10 @@ import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Spider;
 import us.codecraft.webmagic.downloader.OkHttpDownloader;
 import us.codecraft.webmagic.processor.PageProcessor;
-import us.codecraft.webmagic.proxy.Proxy;
-import us.codecraft.webmagic.proxy.SimpleProxyProvider;
 import us.codecraft.webmagic.proxy.SimpleProxySelector;
+
+import java.net.InetSocketAddress;
+import java.net.Proxy;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,6 +45,13 @@ public class ZhihuPageProcessor implements PageProcessor {
 
     public static void main(String[] args) {
 
+        // fiddler proxy
+        System.setProperty("http.proxyHost", "127.0.0.1");
+        System.setProperty("https.proxyHost", "127.0.0.1");
+        System.setProperty("http.proxyPort", "8888");
+        System.setProperty("https.proxyPort", "8888");
+
+
         // 获取proxy
         OkHttpClient client = new OkHttpClient();
         final Request request = new Request.Builder()
@@ -55,9 +63,13 @@ public class ZhihuPageProcessor implements PageProcessor {
             if (response.isSuccessful()) {
                 String line = null;
                 while((line = response.body().source().readUtf8Line()) !=null) {
-                    Proxy proxy = new Proxy(
-                            JSON.parseObject(line).getString("host"),
-                            JSON.parseObject(line).getInteger("port")
+//                    Proxy proxy = new Proxy(
+//                            JSON.parseObject(line).getString("host"),
+//                            JSON.parseObject(line).getInteger("port")
+//                    );
+                    Proxy proxy = new Proxy(Proxy.Type.HTTP,
+                            new InetSocketAddress(JSON.parseObject(line).getString("host"),
+                                    JSON.parseObject(line).getInteger("port"))
                     );
                     proxyList.add(proxy);
                 }
@@ -70,8 +82,7 @@ public class ZhihuPageProcessor implements PageProcessor {
         }
 
         OkHttpDownloader downloader = new OkHttpDownloader();
-//        downloader.setProxyProvider(new SimpleProxyProvider(proxyList));
-        downloader.setProxySelector(new SimpleProxySelector());
+        downloader.setProxySelector(new SimpleProxySelector(proxyList));
         Spider.create(new ZhihuPageProcessor())
                 .addUrl("https://www.zhihu.com/explore")
                 .setDownloader(downloader)

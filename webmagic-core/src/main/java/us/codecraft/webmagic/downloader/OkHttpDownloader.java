@@ -8,8 +8,6 @@ import us.codecraft.webmagic.Page;
 import us.codecraft.webmagic.Request;
 import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.Task;
-import us.codecraft.webmagic.proxy.Proxy;
-import us.codecraft.webmagic.proxy.ProxyProvider;
 import us.codecraft.webmagic.selector.PlainText;
 import us.codecraft.webmagic.utils.CharsetUtils;
 
@@ -30,23 +28,22 @@ public class OkHttpDownloader extends AbstractDownloader {
 
     private OkHttpGenerator okHttpGenerator = new OkHttpGenerator();
 
-    public ProxyProvider proxyProvider;
-
     public ProxySelector proxySelector;
 
     private boolean responseHeader = true;
-
-    public void setProxyProvider(ProxyProvider proxyProvider) {
-        this.proxyProvider = proxyProvider;
-    }
 
     public void setProxySelector(ProxySelector proxySelector) {
         this.proxySelector = proxySelector;
     }
 
-    private OkHttpClient getOkHttpClient(Site site) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+    private OkHttpClient getOkHttpClient(Site site, ProxySelector proxySelector) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        ProxySelector selector = proxySelector != null ? proxySelector:null;
         if (site == null) {
-            return okHttpGenerator.getClient(site);
+            if (selector != null) {
+                return okHttpGenerator.getClient(site, proxySelector);
+            } else {
+                return okHttpGenerator.getClient(site);
+            }
         }
         String domain = site.getDomain();
         OkHttpClient client = clients.get(domain);
@@ -54,7 +51,11 @@ public class OkHttpDownloader extends AbstractDownloader {
             synchronized (this) {
                 client = clients.get(domain);
                 if (client == null) {
-                    client = okHttpGenerator.getClient(site);
+                    if (selector != null) {
+                        client = okHttpGenerator.getClient(site, proxySelector);
+                    } else {
+                        client = okHttpGenerator.getClient(site);
+                    }
                     clients.put(domain, client);
                 }
             }
@@ -68,11 +69,10 @@ public class OkHttpDownloader extends AbstractDownloader {
             throw new NullPointerException("task or site can not be null");
         }
         long start = System.currentTimeMillis();
-        Proxy proxy = proxyProvider != null ? proxyProvider.getProxy(task):null;
 
         Page page = Page.fail();
         try {
-            OkHttpClient client = getOkHttpClient(task.getSite());
+            OkHttpClient client = getOkHttpClient(task.getSite(),proxySelector);
             okhttp3.Request.Builder requestBuilder = new okhttp3.Request.Builder();
             okhttp3.Request okRequest = okHttpGenerator.getRequest(requestBuilder.url(request.getUrl()), request).build();
 

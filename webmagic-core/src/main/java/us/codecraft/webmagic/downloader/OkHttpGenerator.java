@@ -5,6 +5,9 @@ import us.codecraft.webmagic.Site;
 import us.codecraft.webmagic.utils.HttpConstant;
 
 import javax.net.ssl.*;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.ProxySelector;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
@@ -22,7 +25,7 @@ public class OkHttpGenerator {
     }
 
     public OkHttpGenerator setPoolSize(int poolSize) {
-        connectionPool = new ConnectionPool(poolSize,30, TimeUnit.SECONDS);
+        connectionPool = new ConnectionPool(poolSize,60, TimeUnit.SECONDS);
         return this;
     }
 
@@ -52,7 +55,23 @@ public class OkHttpGenerator {
                 .sslSocketFactory(getSSLSocketFactory(), getX509TrustManage())
                 .followRedirects(false) // 禁用重定向
                 .callTimeout(site.getTimeOut(),TimeUnit.MILLISECONDS)   // 超时
+                .readTimeout(site.getTimeOut(), TimeUnit.MILLISECONDS)
+                .writeTimeout(site.getTimeOut(), TimeUnit.MILLISECONDS)
+                .connectTimeout(site.getTimeOut(), TimeUnit.MILLISECONDS)
                 .cookieJar(new CookieJarImpl()) // 设置cookie
+                .build();
+    }
+
+    public OkHttpClient getClient(Site site, ProxySelector proxySelector) throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        return new OkHttpClient.Builder()
+                .sslSocketFactory(getSSLSocketFactory(), getX509TrustManage())
+                .followRedirects(false) // 禁用重定向
+                .callTimeout(site.getTimeOut(),TimeUnit.MILLISECONDS)   // 超时
+                .readTimeout(site.getTimeOut(), TimeUnit.MILLISECONDS)
+                .writeTimeout(site.getTimeOut(), TimeUnit.MILLISECONDS)
+                .connectTimeout(site.getTimeOut(), TimeUnit.MILLISECONDS)
+                .cookieJar(new CookieJarImpl()) // 设置cookie
+                .proxySelector(proxySelector)   // 代理
                 .build();
     }
 

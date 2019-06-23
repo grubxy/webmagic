@@ -8,6 +8,7 @@ import java.net.Proxy;
 import java.net.ProxySelector;
 import java.net.SocketAddress;
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 
 public class SimpleProxySelector extends ProxySelector {
@@ -16,8 +17,9 @@ public class SimpleProxySelector extends ProxySelector {
 
     private List<Proxy> proxyList;
 
-    SimpleProxySelector(List<Proxy> proxies) {
+    public SimpleProxySelector(List<Proxy> proxies) {
         this.proxyList = proxies;
+        Collections.shuffle(this.proxyList);
     }
 
     @Override
